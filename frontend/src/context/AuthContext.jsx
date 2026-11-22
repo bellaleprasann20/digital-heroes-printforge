@@ -1,3 +1,4 @@
+
 import {
   createContext,
   useCallback,
@@ -16,6 +17,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Initialize and monitor authentication
   useEffect(() => {
     let mounted = true;
 
@@ -61,6 +63,7 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  // Register customer
   const register = useCallback(async ({ name, email, password }) => {
     const normalizedName = name.trim();
     const normalizedEmail = email.trim().toLowerCase();
@@ -81,9 +84,15 @@ export function AuthProvider({ children }) {
 
     if (error) throw error;
 
+    if (data.session && data.user) {
+      setSession(data.session);
+      setUser(data.user);
+    }
+
     return data;
   }, []);
 
+  // Login customer or admin
   const login = useCallback(async ({ email, password }) => {
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -98,9 +107,18 @@ export function AuthProvider({ children }) {
 
     if (error) throw error;
 
+    if (!data.user || !data.session) {
+      throw new Error('Login failed. Please try again.');
+    }
+
+    // Immediately update authentication state
+    setSession(data.session);
+    setUser(data.user);
+
     return data;
   }, []);
 
+  // Logout
   const logout = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
 
@@ -110,6 +128,7 @@ export function AuthProvider({ children }) {
     setSession(null);
   }, []);
 
+  // Password reset
   const sendPasswordReset = useCallback(async (email) => {
     const normalizedEmail = email.trim().toLowerCase();
 
@@ -127,6 +146,7 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
+  // Update password
   const updatePassword = useCallback(async (password) => {
     if (!password || password.length < 8) {
       throw new Error('Password must contain at least 8 characters.');
@@ -141,6 +161,7 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
+  // Update profile
   const updateProfile = useCallback(async (updates) => {
     const fullName = String(updates?.full_name || '').trim();
 
@@ -165,6 +186,7 @@ export function AuthProvider({ children }) {
     return data.user;
   }, []);
 
+  // Refresh authentication session
   const refreshSession = useCallback(async () => {
     const { data, error } = await supabase.auth.refreshSession();
 
@@ -176,6 +198,7 @@ export function AuthProvider({ children }) {
     return data.session;
   }, []);
 
+  // User role
   const role = user?.app_metadata?.role || 'customer';
 
   const isAuthenticated = Boolean(user);

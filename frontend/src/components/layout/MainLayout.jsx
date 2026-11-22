@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
@@ -6,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 
 export default function MainLayout() {
-  const { user, logout } = useAuth();
+  const { user, role, logout } = useAuth();
   const { itemCount } = useCart();
 
   const handleLogout = async () => {
@@ -21,6 +22,7 @@ export default function MainLayout() {
     <div className="flex min-h-screen flex-col bg-[var(--color-background)]">
       <Navbar
         user={user}
+        role={role}
         cartCount={itemCount}
         onLogout={handleLogout}
       />

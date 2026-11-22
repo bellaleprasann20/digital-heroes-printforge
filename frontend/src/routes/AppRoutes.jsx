@@ -1,4 +1,4 @@
-
+﻿
 import { useEffect, useMemo, useState } from 'react';
 import {
   Navigate,
@@ -53,12 +53,15 @@ import OrderDetails from '../pages/customer/OrderDetails';
 import DesignEditor from '../pages/customer/DesignEditor';
 
 // Admin pages
+import AdminDashboard from '../pages/admin/AdminDashboard';
 import ManageProducts from '../pages/admin/ManageProducts';
 import ManageCategories from '../pages/admin/ManageCategories';
 import ManageOrders from '../pages/admin/ManageOrders';
 import ProofManagement from '../pages/admin/ProofManagement';
 import ProductionQueue from '../pages/admin/ProductionQueue';
 import ProductionDetails from '../pages/admin/ProductionDetails';
+import ManageUsers from '../pages/admin/ManageUsers';
+import adminService from '../services/adminService';
 import Reports from '../pages/admin/Reports';
 import Settings from '../pages/admin/Settings';
 
@@ -424,24 +427,28 @@ function LoginRoute() {
   }
 
   const handleLogin = async ({ email, password }) => {
-    setSubmitting(true);
-    setError('');
+  setSubmitting(true);
+  setError('');
 
-    try {
-      await login({ email, password });
+  try {
+    const data = await login({ email, password });
 
-      return {
-        redirectTo:
-          location.state?.from?.pathname || '/account/dashboard',
-      };
-    } catch (err) {
-      setError(err.message || 'Unable to log in. Please try again.');
-      throw err;
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    const loggedInRole = data.user?.app_metadata?.role;
 
+    return {
+      redirectTo:
+        location.state?.from?.pathname ||
+        (loggedInRole === 'admin'
+          ? '/admin/dashboard'
+          : '/account/dashboard'),
+    };
+  } catch (err) {
+    setError(err.message || 'Unable to log in. Please try again.');
+    throw err;
+  } finally {
+    setSubmitting(false);
+  }
+};
   return (
     <Login
       onLogin={handleLogin}
@@ -913,68 +920,122 @@ function OrderDetailsRoute() {
 // Saved Designs
 // --------------------------------------------------
 
+function ManageUsersRoute() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const loadUsers = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const response = await adminService.getCustomers({
+        page: 1,
+        limit: 100,
+      });
+
+      const customers = response?.customers || [];
+
+      const formattedUsers = customers.map((user) => {
+        const isSuspended =
+          user.banned_until &&
+          new Date(user.banned_until).getTime() > Date.now();
+
+        return {
+          id: user.id,
+          name:
+            user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
+            'Unnamed user',
+          email: user.email || '',
+          phone: user.user_metadata?.phone || '',
+          role: user.app_metadata?.role || 'customer',
+          status: isSuspended ? 'suspended' : 'active',
+          isActive: !isSuspended,
+          createdAt: user.created_at,
+        };
+      });
+
+      setUsers(formattedUsers);
+    } catch (err) {
+      setError(err.message || 'Unable to load customers.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const handleUpdateRole = async (user) => {
+    const nextRole = user.role === 'admin' ? 'customer' : 'admin';
+
+    const confirmed = window.confirm(
+      `Change ${user.email}'s role to ${nextRole}?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await adminService.updateCustomerRole(user.id, nextRole);
+      await loadUsers();
+    } catch (err) {
+      window.alert(err.message || 'Unable to update user role.');
+    }
+  };
+
+  return (
+    <ManageUsers
+      users={users}
+      loading={loading}
+      error={error}
+      onUpdateRole={handleUpdateRole}
+      onRetry={loadUsers}
+    />
+  );
+}
+
 function MyDesignsRoute() {
   const [designs, setDesigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [reloadKey, setReloadKey] = useState(0);
 
-  useEffect(() => {
-    let active = true;
-
-    const loadDesigns = async () => {
+  const loadDesigns = async () => {
+    try {
       setLoading(true);
       setError('');
 
-      try {
-        const result = await designService.getMyDesigns({
-          page: 1,
-          limit: 100,
-        });
+      const response = await designService.getMyDesigns({
+        page: 1,
+        limit: 100,
+      });
 
-        if (!active) return;
+      const items = response?.designs || [];
 
-        const rawDesigns = Array.isArray(result)
-          ? result
-          : Array.isArray(result?.designs)
-            ? result.designs
-            : [];
+      setDesigns(items.map(normalizeDesign));
+    } catch (err) {
+      setError(err.message || 'Unable to load your saved designs.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        setDesigns(rawDesigns.map(normalizeDesign));
-      } catch (err) {
-        if (active) {
-          setError(
-            err?.message || 'Unable to load your saved designs.'
-          );
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    };
-
+  useEffect(() => {
     loadDesigns();
-
-    return () => {
-      active = false;
-    };
-  }, [reloadKey]);
+  }, []);
 
   const handleDelete = async (design) => {
-    const id = design.id || design._id;
+    const designId = design.id || design._id;
 
-    if (!id) {
-      throw new Error('Design ID is missing.');
+    try {
+      await designService.deleteDesign(designId);
+      await loadDesigns();
+    } catch (err) {
+      setError(err.message || 'Unable to delete this design.');
+      throw err;
     }
-
-    await designService.deleteDesign(id);
-
-    setDesigns((current) =>
-      current.filter(
-        (item) => (item.id || item._id) !== id
-      )
-    );
   };
 
   return (
@@ -983,9 +1044,7 @@ function MyDesignsRoute() {
       loading={loading}
       error={error}
       onDelete={handleDelete}
-      onRetry={() =>
-        setReloadKey((current) => current + 1)
-      }
+      onRetry={loadDesigns}
     />
   );
 }
@@ -1350,7 +1409,7 @@ function ReorderRoute() {
                   </h2>
 
                   <p className="mt-1 text-xs text-[var(--color-muted)]">
-                    {order.items.length} item(s) · {order.status}
+                    {order.items.length} item(s) Â· {order.status}
                   </p>
 
                   {order.createdAt && (
@@ -1982,14 +2041,294 @@ function AddressesRoute() {
 // --------------------------------------------------
 
 function AdminDashboardRoute() {
-  return <PagePlaceholder title="Admin Dashboard" />;
+  const [dashboard, setDashboard] = useState({
+    stats: {},
+    recentOrders: [],
+    productionSummary: [],
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const loadDashboard = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const response = await adminService.getDashboard();
+
+      setDashboard({
+        stats: response?.stats || {},
+        recentOrders: response?.recentOrders || [],
+        productionSummary: response?.productionSummary || [],
+      });
+    } catch (err) {
+      setError(err.message || 'Unable to load dashboard.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  return (
+    <AdminDashboard
+      stats={dashboard.stats}
+      recentOrders={dashboard.recentOrders}
+      productionSummary={dashboard.productionSummary}
+      loading={loading}
+      error={error}
+      onRetry={loadDashboard}
+    />
+  );
 }
 
-function ManageUsersRoute() {
-  return <PagePlaceholder title="Manage Customers" />;
-}
+
 
 // --------------------------------------------------
+// Admin Products
+// --------------------------------------------------
+
+function AdminProductsRoute() {
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadProducts = async () => {
+      setLoading(true);
+      setError('');
+
+      try {
+        const [productResponse, categoryResponse] = await Promise.all([
+          adminService.getProducts({ page: 1, limit: 100 }),
+          adminService.getCategories(),
+        ]);
+
+        if (productResponse?.success === false) {
+          throw new Error(
+            productResponse.message || 'Unable to load products.'
+          );
+        }
+
+        if (categoryResponse?.success === false) {
+          throw new Error(
+            categoryResponse.message || 'Unable to load categories.'
+          );
+        }
+
+        if (!active) return;
+
+        const rawProducts = productResponse?.products || [];
+        const rawCategories = categoryResponse?.categories || [];
+
+        setProducts(rawProducts.map((product) => ({
+          id: product.id,
+          name: product.name,
+          sku: product.slug,
+          imageUrl: product.image_url || '',
+          categoryId: product.category_id,
+          categoryName: product.categories?.name || 'Uncategorized',
+          startingPrice: Number(product.base_price) || 0,
+          currency: product.currency || 'INR',
+          isActive: product.is_active,
+          isFeatured: product.is_featured,
+          division: product.division,
+        })));
+
+        setCategories(rawCategories.map((category) => ({
+          id: category.id,
+          name: category.name,
+          slug: category.slug,
+          isActive: category.is_active,
+          productCount: category.productCount || 0,
+        })));
+      } catch (err) {
+        if (active) {
+          setError(err.message || 'Unable to load products.');
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    loadProducts();
+
+    return () => {
+      active = false;
+    };
+  }, [reloadKey]);
+
+  const reload = () => {
+    setReloadKey((current) => current + 1);
+  };
+
+  const handleDelete = async (product) => {
+    try {
+      await adminService.deleteProduct(product.id);
+      reload();
+    } catch (err) {
+      setError(err.message || 'Unable to deactivate product.');
+    }
+  };
+
+  const handleToggleStatus = async (product) => {
+    try {
+      await adminService.updateProduct(product.id, {
+        is_active: !product.isActive,
+      });
+
+      reload();
+    } catch (err) {
+      setError(err.message || 'Unable to update product status.');
+    }
+  };
+
+  return (
+    <ManageProducts
+      products={products}
+      categories={categories}
+      loading={loading}
+      error={error}
+      onDelete={handleDelete}
+      onToggleStatus={handleToggleStatus}
+      onRetry={reload}
+    />
+  );
+}
+// --------------------------------------------------
+function AdminOrdersRoute() {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const loadOrders = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const response = await adminService.getOrders({
+        page: 1,
+        limit: 100,
+      });
+
+      if (response?.success === false) {
+        throw new Error(response.message || 'Unable to load orders.');
+      }
+
+      setOrders(response?.orders || []);
+    } catch (err) {
+      setError(err.message || 'Unable to load orders.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadOrders();
+  }, []);
+
+  return (
+    <ManageOrders
+      orders={orders}
+      loading={loading}
+      error={error}
+      onRetry={loadOrders}
+    />
+  );
+}
+function AdminReportsRoute() {
+  const [report, setReport] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const loadReports = async (range = {}) => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const response = await adminService.getAnalytics(range);
+
+      if (!response?.success) {
+        throw new Error(response?.message || 'Unable to load analytics.');
+      }
+
+      setReport(response.report || null);
+    } catch (err) {
+      setError(err.message || 'Unable to load analytics.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadReports();
+  }, []);
+
+  const handleExport = ({ from, to, report: reportData }) => {
+    if (!reportData) return;
+
+    const rows = [
+      ['Section', 'Name', 'Value'],
+      ['Summary', 'Total Revenue', reportData.totalRevenue ?? 0],
+      ['Summary', 'Total Orders', reportData.totalOrders ?? 0],
+      ['Summary', 'Average Order Value', reportData.averageOrderValue ?? 0],
+      ['Summary', 'Completed Orders', reportData.completedOrders ?? 0],
+      ...(reportData.revenueByPeriod || []).map((item) => [
+        'Revenue',
+        item.label,
+        item.revenue
+      ]),
+      ...(reportData.topProducts || []).map((item) => [
+        'Product',
+        item.name,
+        item.quantity
+      ]),
+      ...(reportData.ordersByStatus || []).map((item) => [
+        'Order Status',
+        item.status,
+        item.count
+      ])
+    ];
+
+    const csv = rows
+      .map((row) =>
+        row.map((value) =>
+          `"${String(value ?? '').replace(/"/g, '""')}"`
+        ).join(',')
+      )
+      .join('\r\n');
+
+    const blob = new Blob([`\uFEFF${csv}`], {
+      type: 'text/csv;charset=utf-8;'
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `printforge-analytics-${from || 'all'}-to-${to || 'all'}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <Reports
+      report={report}
+      loading={loading}
+      error={error}
+      onDateRangeChange={loadReports}
+      onExport={handleExport}
+      onRetry={() => loadReports()}
+    />
+  );
+}
 // Application Routes
 // --------------------------------------------------
 
@@ -2098,10 +2437,10 @@ export default function AppRoutes() {
             element={<AdminDashboardRoute />}
           />
 
-          <Route path="analytics" element={<Reports />} />
-          <Route path="reports" element={<Reports />} />
+          <Route path="analytics" element={<AdminReportsRoute />} />
+          <Route path="reports" element={<AdminReportsRoute />} />
 
-          <Route path="orders" element={<ManageOrders />} />
+          <Route path="orders" element={<AdminOrdersRoute />} />
           <Route path="proofs" element={<ProofManagement />} />
 
           <Route
@@ -2119,7 +2458,7 @@ export default function AppRoutes() {
             element={<PagePlaceholder title="Production Archive" />}
           />
 
-          <Route path="products" element={<ManageProducts />} />
+          <Route path="products" element={<AdminProductsRoute />} />
 
           <Route
             path="products/new"
@@ -2156,3 +2495,9 @@ export default function AppRoutes() {
     </Routes>
   );
 }
+
+
+
+
+
+

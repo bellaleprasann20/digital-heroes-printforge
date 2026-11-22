@@ -67,6 +67,72 @@ export const getMyOrders = async (req, res) => {
 };
 
 // --------------------------------------------------
+// GET ALL ORDERS (ADMIN)
+// --------------------------------------------------
+
+export const getAllOrders = async (req, res) => {
+  try {
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('*, order_items(*)')
+      .order('created_at', { ascending: false })
+      .range(0, 999);
+
+    if (error) throw error;
+
+    const customerIds = [
+      ...new Set((orders || []).map((order) => order.customer_id).filter(Boolean))
+    ];
+
+    let customerMap = {};
+
+    if (customerIds.length) {
+      const { data: customers, error: customerError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', customerIds);
+
+      if (customerError) throw customerError;
+
+      customerMap = Object.fromEntries(
+        (customers || []).map((customer) => [customer.id, customer])
+      );
+    }
+
+    const formattedOrders = (orders || []).map((order) => {
+      const customer = customerMap[order.customer_id] || {};
+
+      return {
+        ...order,
+        orderNumber: order.order_number,
+        customerName: customer.full_name || 'Customer',
+        customerEmail: customer.email || '',
+        customer: {
+          name: customer.full_name || 'Customer',
+          email: customer.email || ''
+        },
+        email: customer.email || '',
+        paymentStatus: order.payment_status,
+        totalAmount: order.total_amount,
+        createdAt: order.created_at,
+        items: order.order_items || []
+      };
+    });
+
+    return res.json({
+      success: true,
+      orders: formattedOrders
+    });
+  } catch (error) {
+    console.error('Get all orders error:', error);
+
+    return res.status(500).json({
+      success: false,
+      message: 'Unable to retrieve all orders.'
+    });
+  }
+};
+// --------------------------------------------------
 // GET ORDER BY ID
 // --------------------------------------------------
 

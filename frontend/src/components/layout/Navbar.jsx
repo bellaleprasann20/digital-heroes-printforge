@@ -27,6 +27,7 @@ const desktopLinkClass = ({ isActive }) =>
 
 export default function Navbar({
   user = null,
+  role = 'customer',
   cartCount = 0,
   onLogout,
 }) {
@@ -45,8 +46,9 @@ export default function Navbar({
     setProductsOpen(false);
   };
 
+  // Use the Supabase role provided by AuthContext.
   const accountHref =
-    user?.role === 'admin'
+    role === 'admin'
       ? '/admin/dashboard'
       : '/account/dashboard';
 

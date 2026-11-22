@@ -2,11 +2,19 @@ import api from './api';
 
 export const adminService = {
   // Dashboard and reports
-  getDashboard: () => api.get('/api/admin/dashboard'),
+  getDashboard: () => api.get('/api/analytics/dashboard'),
 
   getAnalytics: (params = {}) => {
-    const query = new URLSearchParams(params);
-    return api.get(`/api/admin/analytics?${query.toString()}`);
+    const query = new URLSearchParams();
+
+    if (params.from) query.set('startDate', params.from);
+    if (params.to) query.set('endDate', params.to);
+
+    const queryString = query.toString();
+
+    return api.get(
+      `/api/analytics/revenue${queryString ? `?${queryString}` : ''}`
+    );
   },
 
   exportReport: (params = {}) => {
@@ -14,53 +22,54 @@ export const adminService = {
     return api.get(`/api/admin/reports/export?${query.toString()}`);
   },
 
-  // Customer management
+    // Customer management
   getCustomers: (params = {}) => {
     const query = new URLSearchParams(params);
-    return api.get(`/api/admin/customers?${query.toString()}`);
+    return api.get(`/api/users/customers?${query.toString()}`);
   },
 
-  updateCustomerStatus: (userId, status) =>
-    api.patch(`/api/admin/customers/${encodeURIComponent(userId)}/status`, {
-      status,
-    }),
+  updateCustomerRole: (userId, role) =>
+    api.patch(
+      `/api/users/customers/${encodeURIComponent(userId)}/role`,
+      { role }
+    ),
 
   // Product management
   getProducts: (params = {}) => {
     const query = new URLSearchParams(params);
-    return api.get(`/api/admin/products?${query.toString()}`);
+    return api.get(`/api/products/admin?${query.toString()}`);
   },
 
-  createProduct: (payload) => api.post('/api/admin/products', payload),
+  createProduct: (payload) => api.post('/api/products', payload),
 
   updateProduct: (productId, payload) =>
     api.patch(
-      `/api/admin/products/${encodeURIComponent(productId)}`,
+      `/api/products/${encodeURIComponent(productId)}`,
       payload
     ),
 
   deleteProduct: (productId) =>
-    api.delete(`/api/admin/products/${encodeURIComponent(productId)}`),
+    api.delete(`/api/products/${encodeURIComponent(productId)}`),
 
   // Category management
-  getCategories: () => api.get('/api/admin/categories'),
+  getCategories: () => api.get('/api/categories/admin'),
 
   createCategory: (payload) =>
-    api.post('/api/admin/categories', payload),
+    api.post('/api/categories', payload),
 
   updateCategory: (categoryId, payload) =>
     api.patch(
-      `/api/admin/categories/${encodeURIComponent(categoryId)}`,
+      `/api/categories/${encodeURIComponent(categoryId)}`,
       payload
     ),
 
   deleteCategory: (categoryId) =>
-    api.delete(`/api/admin/categories/${encodeURIComponent(categoryId)}`),
+    api.delete(`/api/categories/${encodeURIComponent(categoryId)}`),
 
   // Order and production management
   getOrders: (params = {}) => {
     const query = new URLSearchParams(params);
-    return api.get(`/api/admin/orders?${query.toString()}`);
+    return api.get(`/api/orders/admin?${query.toString()}`);
   },
 
   updateOrderStatus: (orderId, status, note = '') =>
@@ -114,3 +123,8 @@ export const adminService = {
 };
 
 export default adminService;
+
+
+
+
+

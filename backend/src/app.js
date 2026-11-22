@@ -10,6 +10,7 @@ import { env } from './config/env.js';
 
 import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
+import categoryRoutes from './routes/categoryRoutes.js';
 import pricingRoutes from './routes/pricingRoutes.js';
 import designRoutes from './routes/designRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
@@ -90,6 +91,7 @@ app.get('/api/health', (req, res) => {
 // API routes.
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/categories', categoryRoutes);
 app.use('/api/pricing', pricingRoutes);
 app.use('/api/designs', designRoutes);
 app.use('/api/orders', orderRoutes);
@@ -106,3 +108,4 @@ app.use('/api', notFoundHandler);
 app.use(errorHandler);
 
 export default app;
+

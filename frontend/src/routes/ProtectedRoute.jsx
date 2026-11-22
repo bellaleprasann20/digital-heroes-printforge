@@ -3,7 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function ProtectedRoute() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, role } = useAuth();
   const location = useLocation();
 
   // Wait until Supabase restores the session.
@@ -36,6 +36,11 @@ export default function ProtectedRoute() {
     );
   }
 
-  // Allow authenticated users.
+  // Admins should use the admin workspace.
+  if (role === 'admin') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  // Allow authenticated customers.
   return <Outlet />;
 }
