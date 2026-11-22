@@ -1,300 +1,396 @@
+﻿# Database Schema — Digital Heroes PrintForge
 
-# Database Schema
+## 1. Database Overview
 
-## 1. Database
+- **Database:** PostgreSQL
+- **Provider:** Supabase
+- **Schema:** `public`
+- **Live tables verified:** 11
+- **Identifier type:** UUID
+- **Timestamp convention:** `TIMESTAMPTZ`
+- **Flexible structured data:** `JSONB`
+- **Monetary values:** `NUMERIC`
+- **Default currency:** INR
 
-Database: PostgreSQL  
-Provider: Supabase
+This document describes the database structure retrieved from the live Supabase project's `information_schema` on 22 November 2026. It distinguishes existing database objects from proposed future extensions.
 
-Primary identifiers use UUID.
+## 2. Live Entity Relationships
 
-Timestamps use TIMESTAMPTZ.
-
-## 2. Entity Relationships
+The following diagram reflects the foreign-key relationships retrieved from the live database.
 
 ```mermaid
 erDiagram
-    PROFILES ||--o{ DESIGNS : owns
-    PROFILES ||--o{ ORDERS : places
-    CATEGORIES ||--o{ PRODUCTS : contains
-    PRODUCTS ||--o{ PRODUCT_OPTIONS : has
-    PRODUCTS ||--o{ DESIGNS : supports
-    ORDERS ||--|{ ORDER_ITEMS : contains
-    PRODUCTS ||--o{ ORDER_ITEMS : referenced_by
-    DESIGNS ||--o{ ORDER_ITEMS : used_in
-    ORDERS ||--o{ PROOF_VERSIONS : has
-    ORDER_ITEMS ||--o{ PROOF_VERSIONS : receives
-    ORDERS ||--o{ PRODUCTION_FILES : generates
-    ORDER_ITEMS ||--o{ PRODUCTION_FILES : generates
-    PROFILES ||--o{ ORDER_ACTIVITY : performs
-    ORDERS ||--o{ ORDER_ACTIVITY : records
+    PROFILES ||--o{ DESIGNS : customer_id
+    PRODUCTS o|--o{ DESIGNS : product_id
+    PROFILES o|--o{ ORDER_ACTIVITY : actor_id
+    ORDERS ||--o{ ORDER_ACTIVITY : order_id
+    ORDERS ||--o{ ORDER_ITEMS : order_id
+    PRODUCTS o|--o{ ORDER_ITEMS : product_id
+    DESIGNS o|--o{ ORDER_ITEMS : design_id
+    PROFILES ||--o{ ORDERS : customer_id
+    CATEGORIES ||--o{ PRODUCTS : category_id
+    PRODUCTS ||--o{ PRODUCT_OPTIONS : product_id
+    ORDERS ||--o{ PRODUCTION_FILES : order_id
+    ORDER_ITEMS o|--o{ PRODUCTION_FILES : order_item_id
+    PROFILES ||--o{ PRODUCTION_FILES : customer_id
+    PROFILES o|--o{ PRODUCTION_FILES : generated_by
+    ORDERS ||--o{ PROOF_VERSIONS : order_id
+    ORDER_ITEMS o|--o{ PROOF_VERSIONS : order_item_id
+    PROFILES o|--o{ PROOF_VERSIONS : uploaded_by
+    PROFILES o|--o{ PROOF_VERSIONS : reviewed_by
+    ORDERS ||--o{ PROOFS : order_id
 ```
 
-## 3. Core Tables
+**Relationship note:** `proofs.customer_id` and `proofs.approved_by` are columns in the live table, but the supplied foreign-key query did not report foreign-key constraints for them. The diagram therefore does not represent them as enforced relationships.
 
-### profiles
+## 3. Existing Tables and Columns
+
+The following sections document all columns returned by the live database query.
+
+Notation:
+- `NOT NULL` means the column is required.
+- `NULL` means the column is nullable.
+- `—` means no database default was reported.
+
+### 3.1 profiles
+
 Stores customer and administrator profile information.
 
-Important fields:
-- id
-- full_name
-- email
-- phone
-- avatar_url
-- role
-- is_active
-- created_at
-- updated_at
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| id | uuid | No | — |
+| full_name | text | No | `''` |
+| email | text | No | `''` |
+| phone | text | Yes | — |
+| avatar_url | text | Yes | — |
+| role | text | No | `'customer'` |
+| is_active | boolean | No | `true` |
+| created_at | timestamptz | No | `now()` |
+| updated_at | timestamptz | No | `now()` |
 
-### categories
-Stores the six product divisions.
+### 3.2 categories
 
-Important fields:
-- id
-- name
-- slug
-- description
-- icon
-- display_order
-- is_active
+Stores the product categories and print divisions.
 
-### products
-Stores product information and printing specifications.
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| id | uuid | No | `gen_random_uuid()` |
+| name | text | No | — |
+| slug | text | No | — |
+| description | text | Yes | — |
+| icon | text | Yes | — |
+| image_url | text | Yes | — |
+| display_order | integer | No | `0` |
+| is_active | boolean | No | `true` |
+| created_at | timestamptz | No | `now()` |
+| updated_at | timestamptz | No | `now()` |
 
-Important fields:
-- id
-- category_id
-- name
-- slug
-- division
-- base_price
-- currency
-- default_width
-- default_height
-- dimension_unit
-- print_dpi
-- bleed_mm
-- safe_margin_mm
-- materials
-- specifications
-- image_url
-- is_active
-- is_featured
+### 3.3 products
 
-### product_options
-Stores product-specific customization options.
+Stores printable products, pricing, dimensions, and production specifications.
 
-Important fields:
-- id
-- product_id
-- option_group
-- option_name
-- option_value
-- price_adjustment
-- metadata
-- is_active
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| id | uuid | No | `gen_random_uuid()` |
+| category_id | uuid | No | — |
+| name | text | No | — |
+| slug | text | No | — |
+| description | text | Yes | — |
+| division | text | No | — |
+| base_price | numeric | No | `0` |
+| currency | character | No | `'INR'` |
+| default_width | numeric | Yes | — |
+| default_height | numeric | Yes | — |
+| dimension_unit | text | No | `'mm'` |
+| min_width | numeric | Yes | — |
+| max_width | numeric | Yes | — |
+| min_height | numeric | Yes | — |
+| max_height | numeric | Yes | — |
+| print_dpi | integer | No | `300` |
+| bleed_mm | numeric | No | `3` |
+| safe_margin_mm | numeric | No | `3` |
+| materials | jsonb | No | `[]` |
+| specifications | jsonb | No | `{}` |
+| image_url | text | Yes | — |
+| gallery_images | jsonb | No | `[]` |
+| is_active | boolean | No | `true` |
+| is_featured | boolean | No | `false` |
+| sort_order | integer | No | `0` |
+| created_at | timestamptz | No | `now()` |
+| updated_at | timestamptz | No | `now()` |
 
-### designs
-Stores customer designs and editor data.
+### 3.4 product_options
 
-Important fields:
-- id
-- customer_id
-- product_id
-- name
-- canvas_width
-- canvas_height
-- canvas_unit
-- design_data
-- thumbnail_url
-- source_file_path
-- status
+Stores configurable options associated with products.
 
-### orders
-Stores the main order record.
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| id | uuid | No | `gen_random_uuid()` |
+| product_id | uuid | No | — |
+| option_group | text | No | — |
+| option_name | text | No | — |
+| option_value | text | No | — |
+| price_adjustment | numeric | No | `0` |
+| metadata | jsonb | No | `{}` |
+| is_active | boolean | No | `true` |
+| display_order | integer | No | `0` |
+| created_at | timestamptz | No | `now()` |
+| updated_at | timestamptz | No | `now()` |
 
-Important fields:
-- id
-- order_number
-- customer_id
-- status
-- payment_status
-- subtotal
-- discount_amount
-- tax_rate
-- tax_amount
-- shipping_amount
-- total_amount
-- currency
-- shipping_address
-- billing_address
-- estimated_completion_date
-- completed_at
+### 3.5 designs
 
-### order_items
-Stores individual items within orders.
+Stores customer-created designs and their editor configuration.
 
-Important fields:
-- id
-- order_id
-- product_id
-- design_id
-- product_name
-- quantity
-- width
-- height
-- material
-- configuration
-- unit_price
-- discount_amount
-- tax_amount
-- line_total
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| id | uuid | No | `gen_random_uuid()` |
+| customer_id | uuid | No | — |
+| product_id | uuid | Yes | — |
+| name | text | No | — |
+| canvas_width | numeric | No | — |
+| canvas_height | numeric | No | — |
+| canvas_unit | text | No | `'mm'` |
+| design_data | jsonb | No | `{}` |
+| thumbnail_url | text | Yes | — |
+| source_file_path | text | Yes | — |
+| status | text | No | `'draft'` |
+| created_at | timestamptz | No | `now()` |
+| updated_at | timestamptz | No | `now()` |
 
-### proof_versions
-Stores immutable proof versions.
+### 3.6 orders
 
-Important fields:
-- id
-- order_id
-- order_item_id
-- version_number
-- proof_file_path
-- preview_file_path
-- status
-- customer_feedback
-- uploaded_by
-- reviewed_by
-- approved_at
+Stores customer orders, payment details, totals, and order status.
 
-### production_files
-Stores references to generated production files.
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| id | uuid | No | `gen_random_uuid()` |
+| order_number | text | No | — |
+| customer_id | uuid | No | — |
+| status | text | No | `'order'` |
+| payment_status | text | No | `'pending'` |
+| subtotal | numeric | No | `0` |
+| discount_amount | numeric | No | `0` |
+| tax_rate | numeric | No | `18` |
+| tax_amount | numeric | No | `0` |
+| shipping_amount | numeric | No | `0` |
+| total_amount | numeric | No | `0` |
+| currency | character | No | `'INR'` |
+| shipping_address | jsonb | No | `{}` |
+| billing_address | jsonb | No | `{}` |
+| customer_notes | text | Yes | — |
+| admin_notes | text | Yes | — |
+| estimated_completion_date | date | Yes | — |
+| completed_at | timestamptz | Yes | — |
+| cancelled_at | timestamptz | Yes | — |
+| cancellation_reason | text | Yes | — |
+| created_at | timestamptz | No | `now()` |
+| updated_at | timestamptz | No | `now()` |
+| razorpay_order_id | text | Yes | — |
+| razorpay_payment_id | text | Yes | — |
 
-Important fields:
-- id
-- order_id
-- order_item_id
-- customer_id
-- file_name
-- storage_path
-- mime_type
-- file_size
-- format
-- dpi
-- width_mm
-- height_mm
-- generation_status
+### 3.7 order_items
 
-### order_activity
-Stores order history and audit events.
+Stores individual products and configurations within an order.
 
-Important fields:
-- id
-- order_id
-- actor_id
-- activity_type
-- old_status
-- new_status
-- description
-- metadata
-- created_at
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| id | uuid | No | `gen_random_uuid()` |
+| order_id | uuid | No | — |
+| product_id | uuid | Yes | — |
+| design_id | uuid | Yes | — |
+| product_name | text | No | — |
+| product_slug | text | Yes | — |
+| quantity | integer | No | — |
+| width | numeric | Yes | — |
+| height | numeric | Yes | — |
+| dimension_unit | text | No | `'mm'` |
+| material | text | Yes | — |
+| orientation | text | Yes | — |
+| configuration | jsonb | No | `{}` |
+| unit_price | numeric | No | `0` |
+| discount_amount | numeric | No | `0` |
+| tax_amount | numeric | No | `0` |
+| line_total | numeric | No | `0` |
+| artwork_path | text | Yes | — |
+| created_at | timestamptz | No | `now()` |
+| updated_at | timestamptz | No | `now()` |
 
-## 4. Required Additional Tables
+### 3.8 proof_versions
 
-The initial migrations do not yet create every table required by the full application.
+Stores versioned artwork proofs and their review information.
 
-Additional tables should include:
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| id | uuid | No | `gen_random_uuid()` |
+| order_id | uuid | No | — |
+| order_item_id | uuid | Yes | — |
+| version_number | integer | No | — |
+| proof_file_path | text | No | — |
+| preview_file_path | text | Yes | — |
+| status | text | No | `'pending'` |
+| customer_feedback | text | Yes | — |
+| admin_notes | text | Yes | — |
+| uploaded_by | uuid | Yes | — |
+| reviewed_by | uuid | Yes | — |
+| reviewed_at | timestamptz | Yes | — |
+| approved_at | timestamptz | Yes | — |
+| created_at | timestamptz | No | `now()` |
+
+### 3.9 proofs
+
+Stores proof records, preview and file paths, revision notes, and approval information.
+
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| id | uuid | No | `gen_random_uuid()` |
+| order_id | uuid | No | — |
+| customer_id | uuid | No | — |
+| version | integer | No | `1` |
+| preview_path | text | No | — |
+| file_path | text | No | — |
+| status | character varying | No | `'pending'` |
+| revision_note | text | Yes | — |
+| approved_at | timestamptz | Yes | — |
+| approved_by | uuid | Yes | — |
+| created_at | timestamptz | No | `now()` |
+| updated_at | timestamptz | No | `now()` |
+
+### 3.10 production_files
+
+Stores generated production-file metadata and storage references.
+
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| id | uuid | No | `gen_random_uuid()` |
+| order_id | uuid | No | — |
+| order_item_id | uuid | Yes | — |
+| customer_id | uuid | No | — |
+| file_name | text | No | — |
+| storage_path | text | No | — |
+| mime_type | text | No | — |
+| file_size | bigint | No | — |
+| format | text | No | — |
+| dpi | integer | Yes | — |
+| width_mm | numeric | Yes | — |
+| height_mm | numeric | Yes | — |
+| bleed_mm | numeric | Yes | — |
+| generation_status | text | No | `'completed'` |
+| generated_by | uuid | Yes | — |
+| generated_at | timestamptz | No | `now()` |
+| metadata | jsonb | No | `{}` |
+| created_at | timestamptz | No | `now()` |
+
+### 3.11 order_activity
+
+Stores order-related activity and status-change history.
+
+| Column | Type | Nullable | Default |
+|---|---|---|---|
+| id | uuid | No | `gen_random_uuid()` |
+| order_id | uuid | No | — |
+| actor_id | uuid | Yes | — |
+| activity_type | text | No | — |
+| old_status | text | Yes | — |
+| new_status | text | Yes | — |
+| description | text | No | — |
+| metadata | jsonb | No | `{}` |
+| created_at | timestamptz | No | `now()` |
+
+## 4. Foreign-Key Relationships
+
+The live database query returned the following 19 foreign-key relationships:
+
+| Table | Column | References |
+|---|---|---|
+| designs | customer_id | profiles.id |
+| designs | product_id | products.id |
+| order_activity | actor_id | profiles.id |
+| order_activity | order_id | orders.id |
+| order_items | design_id | designs.id |
+| order_items | order_id | orders.id |
+| order_items | product_id | products.id |
+| orders | customer_id | profiles.id |
+| product_options | product_id | products.id |
+| production_files | customer_id | profiles.id |
+| production_files | generated_by | profiles.id |
+| production_files | order_id | orders.id |
+| production_files | order_item_id | order_items.id |
+| products | category_id | categories.id |
+| proof_versions | order_id | orders.id |
+| proof_versions | order_item_id | order_items.id |
+| proof_versions | reviewed_by | profiles.id |
+| proof_versions | uploaded_by | profiles.id |
+| proofs | order_id | orders.id |
+
+## 5. Planned Future Extensions
+
+The following tables were proposed as possible extensions in the original documentation. They were not present in the live `public` table list retrieved on 22 November 2026. They must not be treated as currently implemented tables.
 
 ### pricing_quotes
-- id
-- customer_id
-- quote_data
-- subtotal
-- discount_amount
-- tax_amount
-- total_amount
-- currency
-- expires_at
-- status
-- created_at
+Potentially stores saved customer pricing calculations and quote expiry information.
 
 ### payments
-- id
-- order_id
-- customer_id
-- gateway
-- gateway_order_id
-- gateway_payment_id
-- amount
-- currency
-- status
-- signature_verified
-- created_at
+Potentially stores normalized payment transactions, gateway references, and verification results.
 
 ### proof_revisions
-- id
-- proof_version_id
-- customer_id
-- message
-- attachment_path
-- created_at
+Potentially stores individual customer revision requests and supporting attachments.
 
 ### templates
-- id
-- product_id
-- name
-- template_data
-- preview_path
-- is_active
+Potentially stores reusable product design templates.
 
 ### variable_data_jobs
-- id
-- order_id
-- template_path
-- csv_path
-- status
-- total_rows
-- successful_rows
-- failed_rows
-- output_path
-- created_at
+Potentially tracks CSV-based variable-data generation jobs and their output files.
 
-## 5. Storage Design
+These tables should only be added to the live schema documentation after their migrations have been implemented and verified.
 
-Files should be stored in private Supabase Storage buckets.
+## 6. Storage Design
 
-Suggested buckets:
-- customer-artwork
-- design-previews
-- proof-files
-- production-files
-- variable-data
-- product-images
+The database contains file-path and storage-reference columns for designs, artwork, proofs, and production files.
 
-Product images can be public if intended for storefront display.
+Potential Supabase Storage bucket organization:
 
-Customer artwork, proofs, and production files must remain private.
+| Bucket | Intended purpose |
+|---|---|
+| customer-artwork | Customer-uploaded artwork |
+| design-previews | Design thumbnails and previews |
+| proof-files | Proof documents |
+| production-files | Final production-ready files |
+| variable-data | Variable-data source and output files |
+| product-images | Product images and gallery assets |
 
-## 6. Relationships and Constraints
+This is a proposed organization, not a verified inventory of existing Supabase Storage buckets.
 
-- One profile can own multiple orders.
-- One category can contain multiple products.
-- One product can have multiple options.
-- One order can contain multiple order items.
-- One order can have multiple proof versions.
-- One order can generate multiple production files.
-- One order can contain multiple activity records.
+Customer artwork, proofs, and production files should use private storage with authorization-controlled access. Public product images may use public access when appropriate.
 
-## 7. Security
+## 7. Security and Access Control
 
-Row Level Security is enabled on application tables.
+The application uses Supabase Authentication for user identity and application authorization.
 
-Customers can access only their own records.
+The application distinguishes customer and administrator roles. Backend authorization checks should be applied to protected administrative operations.
 
-Administrators can access operational records according to their permissions.
+Database Row Level Security (RLS) policies and Storage policies must be reviewed in the Supabase dashboard or through SQL before claiming that every table and bucket has the intended access restrictions.
 
-Production file metadata and storage objects must not be exposed directly to customers.
+Recommended access rules:
 
-## 8. Migration Order
+- Customers should only access their own profile, designs, orders, and related files.
+- Administrators should have authorized access to operational records.
+- Payment secrets and Supabase service-role credentials must remain server-side.
+- Private artwork, proof, and production files should not be exposed through unrestricted public URLs.
+
+## 8. Data Integrity Considerations
+
+- Use UUID identifiers for records.
+- Maintain foreign-key relationships between related records.
+- Use `NUMERIC` for monetary and dimensional values where precision matters.
+- Use `JSONB` for configurable product, design, address, and metadata structures.
+- Validate order quantities, dimensions, prices, and status transitions in the application and database.
+- Preserve proof versions and order activity history.
+- Protect completed order records from unintended deletion.
+- Use server-side payment verification before marking payments as successful.
+
+## 9. Migration and Deployment Notes
+
+The live schema currently contains these 11 tables:
 
 1. profiles
 2. categories
@@ -304,17 +400,17 @@ Production file metadata and storage objects must not be exposed directly to cus
 6. orders
 7. order_items
 8. proof_versions
-9. production_files
-10. order_activity
-11. RLS policies
-12. Additional business tables and policies
+9. proofs
+10. production_files
+11. order_activity
 
-## 9. Data Integrity
+For future database changes:
 
-- Use foreign keys.
-- Use unique constraints for order numbers and slugs.
-- Use check constraints for quantities, prices, and statuses.
-- Store money using NUMERIC rather than floating-point types.
-- Preserve proof history.
-- Avoid deleting completed order records.
-- Use database transactions for financial and order operations.
+1. Create or update migration files.
+2. Apply migrations to the intended Supabase project.
+3. Verify tables, columns, defaults, and constraints.
+4. Verify foreign keys and indexes.
+5. Review RLS and Storage policies.
+6. Update this document to reflect the verified database state.
+
+Never commit Supabase service-role keys, database passwords, or other private credentials to source control.
