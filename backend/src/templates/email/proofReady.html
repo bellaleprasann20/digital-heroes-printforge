@@ -1,0 +1,76 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Proof Is Ready - PrintForge</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f3ef;font-family:Arial,Helvetica,sans-serif;color:#252823;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:40px 12px;background:#f4f3ef;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:30px 36px;background:#202b25;color:#ffffff;">
+              <h1 style="margin:0;font-size:25px;letter-spacing:1px;">PRINTFORGE<span style="color:#e47b48;">.</span></h1>
+              <p style="margin:8px 0 0;color:#d2d9d3;font-size:13px;">Custom print. Made with precision.</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:40px 36px 20px;">
+              <p style="margin:0 0 12px;color:#df7040;font-size:12px;font-weight:bold;letter-spacing:1.5px;">ACTION REQUIRED</p>
+              <h2 style="margin:0 0 16px;font-size:27px;color:#202b25;">Your proof is ready, {{customerName}}.</h2>
+              <p style="margin:0;color:#646b64;font-size:15px;line-height:1.7;">
+                Your artwork proof is ready for review. Please check the design, spelling, dimensions and layout carefully before approving it.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:20px 36px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f6f2;border-radius:8px;padding:20px;">
+                <tr>
+                  <td style="font-size:13px;color:#72786f;">Order reference</td>
+                  <td align="right" style="font-size:14px;font-weight:bold;color:#202b25;">{{orderNumber}}</td>
+                </tr>
+                <tr>
+                  <td style="padding-top:14px;font-size:13px;color:#72786f;">Proof version</td>
+                  <td align="right" style="padding-top:14px;font-size:14px;font-weight:bold;color:#202b25;">{{proofVersion}}</td>
+                </tr>
+                <tr>
+                  <td style="padding-top:14px;font-size:13px;color:#72786f;">Product</td>
+                  <td align="right" style="padding-top:14px;font-size:14px;color:#202b25;">{{productName}}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:15px 36px 35px;">
+              <h3 style="margin:0 0 10px;color:#202b25;font-size:17px;">Please review your proof</h3>
+              <p style="margin:0;color:#646b64;font-size:14px;line-height:1.8;">
+                If everything looks correct, approve the proof. If something needs changing, submit revision instructions through your account.
+              </p>
+              <p style="margin:25px 0 0;">
+                <a href="{{proofUrl}}" style="display:inline-block;padding:14px 22px;background:#df7040;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">Review your proof</a>
+              </p>
+              <p style="margin:20px 0 0;color:#8a8f87;font-size:12px;line-height:1.6;">
+                Production will remain locked until you approve the proof.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:24px 36px;background:#f6f6f2;color:#777e75;font-size:12px;line-height:1.7;">
+              Need help? Contact us at {{supportEmail}}.<br />
+              © {{year}} Digital Heroes PrintForge. All rights reserved.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

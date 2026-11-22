@@ -1,0 +1,79 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Confirmation - PrintForge</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f3ef;font-family:Arial,Helvetica,sans-serif;color:#252823;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:40px 12px;background:#f4f3ef;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:30px 36px;background:#202b25;color:#ffffff;">
+              <h1 style="margin:0;font-size:25px;letter-spacing:1px;">PRINTFORGE<span style="color:#e47b48;">.</span></h1>
+              <p style="margin:8px 0 0;color:#d2d9d3;font-size:13px;">Custom print. Made with precision.</p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:40px 36px 20px;">
+              <p style="margin:0 0 12px;color:#df7040;font-size:12px;font-weight:bold;letter-spacing:1.5px;">ORDER CONFIRMED</p>
+              <h2 style="margin:0 0 16px;font-size:27px;color:#202b25;">Thanks for your order, {{customerName}}.</h2>
+              <p style="margin:0;color:#646b64;font-size:15px;line-height:1.7;">
+                Your payment has been confirmed. Our team will now begin preparing your artwork and order.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:20px 36px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f6f2;border-radius:8px;padding:20px;">
+                <tr>
+                  <td style="font-size:13px;color:#72786f;">Order reference</td>
+                  <td align="right" style="font-size:14px;font-weight:bold;color:#202b25;">{{orderNumber}}</td>
+                </tr>
+                <tr>
+                  <td style="padding-top:14px;font-size:13px;color:#72786f;">Order date</td>
+                  <td align="right" style="padding-top:14px;font-size:14px;color:#202b25;">{{orderDate}}</td>
+                </tr>
+                <tr>
+                  <td style="padding-top:14px;font-size:13px;color:#72786f;">Payment status</td>
+                  <td align="right" style="padding-top:14px;font-size:14px;font-weight:bold;color:#27835b;">Paid</td>
+                </tr>
+                <tr>
+                  <td style="padding-top:18px;border-top:1px solid #dedfd8;font-size:15px;font-weight:bold;color:#202b25;">Order total</td>
+                  <td align="right" style="padding-top:18px;border-top:1px solid #dedfd8;font-size:18px;font-weight:bold;color:#202b25;">{{orderTotal}}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:15px 36px 35px;">
+              <h3 style="margin:0 0 10px;color:#202b25;font-size:17px;">What happens next?</h3>
+              <p style="margin:0;color:#646b64;font-size:14px;line-height:1.8;">
+                1. Our team prepares your artwork.<br />
+                2. You'll receive a digital proof for approval.<br />
+                3. Production begins after your approval.
+              </p>
+              <p style="margin:25px 0 0;">
+                <a href="{{orderUrl}}" style="display:inline-block;padding:14px 22px;background:#df7040;color:#ffffff;text-decoration:none;border-radius:6px;font-size:14px;font-weight:bold;">View your order</a>
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:24px 36px;background:#f6f6f2;color:#777e75;font-size:12px;line-height:1.7;">
+              Need help? Contact us at {{supportEmail}}.<br />
+              © {{year}} Digital Heroes PrintForge. All rights reserved.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -1,0 +1,65 @@
+
+# Dependencies
+node_modules/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Runtime
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+storage/temp/*
+!storage/temp/.gitkeep
+
+# Generated production files
+storage/production/
+storage/uploads/
+storage/previews/
+
+# Operating system
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build output
+dist/
+build/
+
+# Cache
+.cache/
+.parcel-cache/
+.eslintcache
+
+# Certificates and private keys
+*.pem
+*.key
+*.crt
+*.p12
+
+# Debug files
+*.stackdump

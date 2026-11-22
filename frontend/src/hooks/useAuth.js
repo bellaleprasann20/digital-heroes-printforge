@@ -1,0 +1,10 @@
+import { useAuth as useAuthContext } from '../context/AuthContext';
+
+export default function useAuth() {
+  return useAuthContext();
+}
+
+export { useAuth };
+function useAuth() {
+  return useAuthContext();
+}
